@@ -1,4 +1,4 @@
-# ShapeFormer: Transformer-based Shape Completion via Sparse Representation
+# An Object is Worth 64x64 Pixels: Generating 3D Object via Image Diffusion
 
 <img src='assets/teaser.png'/>
 
@@ -8,7 +8,7 @@
 <!-- | [Twitter thread](https://twitter.com/yan_xg/status/1539108339422212096) -->
 <!-- | [Pre-trained Models](https://www.dropbox.com/s/we886b1fqf2qyrs/ckpts_ICT.zip?dl=0) :fire: |  -->
 
-**This repository is the official pytorch implementation of our paper, *ShapeFormer: Transformer-based Shape Completion via Sparse Representation*.**
+**This repository is the official repository of the paper, *An Object is Worth 64x64 Pixels: Generating 3D Object via Image Diffusion*.**
 
 [Xinggaung Yan](http://yanxg.art)<sup>1</sup>,
 [Han-Hung Lee](https://hanhung.github.io/)<sup>1</sup>,
