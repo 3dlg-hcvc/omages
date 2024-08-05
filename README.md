@@ -1,13 +1,5 @@
 # An Object is Worth 64x64 Pixels: Generating 3D Object via Image Diffusion
 
-<img src='assets/fig_teaser.png'/>
-
-<!-- https://user-images.githubusercontent.com/5100481/150949433-40d84ed1-0a8d-4ae4-bd53-8662ebd669fe.mp4 -->
-
-### [Project Page](https://omages.github.io/) | [Paper (ArXiv)](https://arxiv.org/abs/) 
-<!-- | [Twitter thread](https://twitter.com/yan_xg/status/1539108339422212096) -->
-<!-- | [Pre-trained Models](https://www.dropbox.com/s/we886b1fqf2qyrs/ckpts_ICT.zip?dl=0) :fire: |  -->
-
 **This repository is the official repository of the paper, *An Object is Worth 64x64 Pixels: Generating 3D Object via Image Diffusion*.**
 
 [Xinggaung Yan](http://yanxg.art)<sup>1</sup>,
@@ -16,6 +8,17 @@
 [Angel X. Chang](https://angelxuanchang.github.io/)<sup>1,3</sup>
 
 <sup>1</sup>Simon Fraser University, <sup>2</sup>City University of Hong Kong, <sup>3</sup>Canada-CIFAR AI Chair, Amii
+
+### [Project Page](https://omages.github.io/) | [Paper (ArXiv)](https://arxiv.org/abs/) 
+<!-- | [Twitter thread](https://twitter.com/yan_xg/status/1539108339422212096) -->
+<!-- | [Pre-trained Models](https://www.dropbox.com/s/we886b1fqf2qyrs/ckpts_ICT.zip?dl=0) :fire: |  -->
+
+<img src='assets/fig_teaser.png'/>
+
+<!-- https://user-images.githubusercontent.com/5100481/150949433-40d84ed1-0a8d-4ae4-bd53-8662ebd669fe.mp4 -->
+
+https://github.com/user-attachments/assets/e77098d1-7128-4510-913f-5af302544850
+
 
 ## :hourglass_flowing_sand: UPDATES
 - [ ] Source code and data, coming soon!
