@@ -1,6 +1,6 @@
 # An Object is Worth 64x64 Pixels: Generating 3D Object via Image Diffusion
 
-<img src='assets/teaser.png'/>
+<img src='assets/fig_teaser.png'/>
 
 <!-- https://user-images.githubusercontent.com/5100481/150949433-40d84ed1-0a8d-4ae4-bd53-8662ebd669fe.mp4 -->
 
@@ -13,7 +13,8 @@
 [Xinggaung Yan](http://yanxg.art)<sup>1</sup>,
 [Han-Hung Lee](https://hanhung.github.io/)<sup>1</sup>,
 [Ziyu Wan](http://raywzy.com/)<sup>2</sup>,
-[Angel X. Chang](https://angelxuanchang.github.io/)<sup>1,3</sup>,
+[Angel X. Chang](https://angelxuanchang.github.io/)<sup>1,3</sup>
+
 <sup>1</sup>Simon Fraser University, <sup>2</sup>City University of Hong Kong, <sup>3</sup>Canada-CIFAR AI Chair, Amii
 
 ## :hourglass_flowing_sand: UPDATES
