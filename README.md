@@ -123,7 +123,13 @@ It is easy to visualize the shape with marching cubes if `Xtg` is points of a gr
 If you find our work useful for your research, please consider citing the following papers :)
 
 ```bibtex
-@misc{
+@misc{yan2024omages64,
+  title={An Object is Worth 64x64 Pixels: Generating 3D Object via Image Diffusion}, 
+  author={Xingguang Yan and Han-Hung Lee and Ziyu Wan and Angel X. Chang},
+  year={2024},
+  eprint={2408.03178},
+  archivePrefix={arXiv},
+  url={https://arxiv.org/abs/2408.03178}, 
 }
 ```
 <!-- 
