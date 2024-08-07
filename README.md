@@ -9,7 +9,7 @@
 
 <sup>1</sup>Simon Fraser University, <sup>2</sup>City University of Hong Kong, <sup>3</sup>Canada-CIFAR AI Chair, Amii
 
-### [Project Page](https://omages.github.io/) | [Paper (ArXiv)](https://arxiv.org/abs/) 
+### [Project Page](https://omages.github.io/) | [Paper (ArXiv)](https://arxiv.org/abs/2408.03178) 
 <!-- | [Twitter thread](https://twitter.com/yan_xg/status/1539108339422212096) -->
 <!-- | [Pre-trained Models](https://www.dropbox.com/s/we886b1fqf2qyrs/ckpts_ICT.zip?dl=0) :fire: |  -->
 
