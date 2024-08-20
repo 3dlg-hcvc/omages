@@ -1,0 +1,65 @@
+# python -m src.trainer --opts src/models/omages64_DiT/cfgs/null2geo.yaml --gpus 4 5 6 7
+
+project_name: omg
+expr_name: omages64/null2geo
+
+pltrainer_opt:
+  resume_from: 'resume'
+  logger_kwargs:
+    mode: "online" # online, offline, disabled
+    tags: ["null2geo"] 
+    notes: "null2geo"
+  check_val_every_n_epoch: 4
+  max_epochs: 3000
+  #strategy: "ddp" 
+  strategy: "ddp_find_unused_parameters_true"
+  early_stop_patience: 1000
+  extra_kwargs:
+    num_sanity_val_steps: 0
+    enable_model_summary: true
+    precision: '16-mixed'
+    # precision: '32-true'
+
+pl_model_opt:
+  _target_: src.models.omages64_DiT.pl_model.Model
+  baseDiT_cfg: 
+    _target_: src.models.omages64_DiT.dit_models.OmgDiT
+    input_size: 64
+    in_channels: 4
+    condimg_channels: null
+    num_classes: 63
+    patch_size: 1 # DiT_B_1
+    # patch_size: 2 # DiT_B_2
+    depth: 12
+    hidden_size: 768
+    num_heads: 12
+    learn_sigma: True
+  infer_steps: 250
+
+datamodule_opt:
+  _target_: src.datamodule.DataModule
+  num_workers: 4
+  batch_size: 4
+  test_batch_size: 4
+  trainset_opt: &dset_opt
+    _target_: src.data.abo_datasets.omg_dataset.N2G_Label_OmgABO
+    mode: 'fullsplit'
+    duplicate: 4
+    dset_df: datasets/ABO/omages/df_p64_m02_res64
+  testset_opt: *dset_opt
+
+callbacks:
+  vis:
+    _target_: src.models.omages64_DiT.pl_model.Visualizer
+    no_sanity_check: False
+    every_n_epoch: 32
+    infer_steps: '250'
+    mode: vGeo
+    load_compute: False
+    parallel_vis: True
+    # single_vis: True
+    visual_indices: [0,1,2,3,4,5,6,7]
+
+    # visual_indices: all
+    # all_indices: True
+    

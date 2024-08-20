@@ -1,4 +1,9 @@
+
 # An Object is Worth 64x64 Pixels: Generating 3D Object via Image Diffusion
+
+<a href="https://pytorch.org/"><img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white"></a>
+<a href="https://pytorchlightning.ai/"><img alt="Lightning" src="https://img.shields.io/badge/Lightning-792DE4?style=for-the-badge&logo=pytorch-lightning&logoColor=white"></a>
+<a href="https://wandb.ai/site"><img alt="WandB" src="https://img.shields.io/badge/Weights_&_Biases-FFBE00?style=for-the-badge&logo=WeightsAndBiases&logoColor=white"></a>
 
 **This repository is the official repository of the paper, *An Object is Worth 64x64 Pixels: Generating 3D Object via Image Diffusion*.**
 
@@ -9,9 +14,11 @@
 
 <sup>1</sup>Simon Fraser University, <sup>2</sup>City University of Hong Kong, <sup>3</sup>Canada-CIFAR AI Chair, Amii
 
+
 ### [Project Page](https://omages.github.io/) | [Paper (ArXiv)](https://arxiv.org/abs/2408.03178) 
 <!-- | [Twitter thread](https://twitter.com/yan_xg/status/1539108339422212096) -->
-<!-- | [Pre-trained Models](https://www.dropbox.com/s/we886b1fqf2qyrs/ckpts_ICT.zip?dl=0) :fire: |  -->
+
+
 
 <img src='assets/fig_teaser.png'/>
 
@@ -23,104 +30,71 @@ https://github.com/user-attachments/assets/76fb3b27-2f77-4368-b922-b23b2325ddad
 
 
 
-
-## :hourglass_flowing_sand: UPDATES
-- [ ] Source code and data, coming soon!
-
-<!-- ## Installation
-The code is tested in docker enviroment [pytorch/pytorch:1.6.0-cuda10.1-cudnn7-devel](https://hub.docker.com/layers/pytorch/pytorch/pytorch/1.6.0-cuda10.1-cudnn7-devel/images/sha256-ccebb46f954b1d32a4700aaeae0e24bd68653f92c6f276a608bf592b660b63d7?context=explore).
+## Installation
+The code is tested in docker enviroment [pytorch/pytorch:2.0.1-cuda11.7-cudnn8-devel](https://hub.docker.com/layers/pytorch/pytorch/2.0.1-cuda11.7-cudnn8-devel/images/sha256-4f66166dd757752a6a6a9284686b4078e92337cd9d12d2e14d2d46274dfa9048?context=explore).
 The following are instructions for setting up the environment in a Linux system from scratch.
-You can also directly pull our provided docker environment: `sudo docker pull qheldiv/shapeformer`
-Or build the docker environment by yourself with the setup files in the `Docker` folder.
 
-First, clone this repository with submodule xgutils. [xgutils](https://github.com/QhelDIV/xgutils.git) contains various useful system/numpy/pytorch/3D rendering related functions that will be used by ShapeFormer.
+First, clone this repository:
 
-      git clone --recursive https://github.com/QhelDIV/ShapeFormer.git
+      git clone git@github.com:3dlg-hcvc/omages.git
 
-Then, create a conda environment with the yaml file. (Sometimes the conda is very slow to solve the complex dependencies of this environment, so [mamba](https://mamba.readthedocs.io/en/latest/index.html) is highly recommended)
+Then, create a mamba environment with the yaml file. (Sometimes the conda is a bit slow to solve the dependencies, so [mamba](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html) is recommended). You could also just use conda as well.
 
-      conda env create -f environment.yaml
-      conda activate shapeformer
+      mamba env create -f environment.yaml
+      mamba activate dlt
 
-Next, we need to install torch_scatter through this command
+## Download data and checkpoints
 
-      pip install torch-scatter==2.0.7 -f https://data.pyg.org/whl/torch-1.7.0+cu101.html
+We use the [ABO](https://amazon-berkeley-objects.s3.amazonaws.com/index.html) dataset and process its shapes into omages. The processed data is stored on [huggingface](https://huggingface.co/datasets/3dlg-hcvc/omages_ABO).
 
-## Demo
+To download the 1024 resolution data (~88GB), please run `python setup/download_omages1024.py` and then untar the downloaded file to `datasets/ABO/omages/`. To preview and download the individual data, please check the [data](https://huggingface.co/datasets/3dlg-hcvc/omages_ABO/tree/main/data) folder on huggingface.
 
-First, download the pretrained model from this google drive [URL](https://drive.google.com/file/d/1QmR27nHcLmzFfyvxs3NH7pzUmbVATt4f/view?usp=sharing) and extract the content to experiments/
+We have prepared a downsampled version of the dataset (<1GB) for training. To obtain it please run `python setup/download_omages64.py`.
 
-Then run the following command to test VQDIF. The results are in `experiments/demo_vqdif/results`
+To download the checkpoints, please run `python setup/download_ckpts.py`
 
-      python -m shapeformer.trainer --opts configs/demo/demo_vqdif.yaml --gpu 0 --mode "run"
+## Previewing the omages data
+We highly recommend you to check the `notebooks/preview_omages.ipynb` or `notebooks/preview_omages.py` file for a better understanding of the omage representation. The following figures shows a preview of the B0742FHDJF lamp *encoded* from .glb shape to 1024 resolution omage and *decoded* back to *.glb*. The 2D images on the left are position map, patch segmentation, object space normal map, albedo, metalness and roughness maps.
 
-Run the following command to test ShapeFormer for shape completion. The results are in `experiments/demo_shapeformer/results`
+<img src='assets/preview_omage.png'/>
 
-      python -m shapeformer.trainer --opts configs/demo/demo_shapeformer.yaml --gpu 0 --mode "run"
-
-## Dataset
-
-We use the dataset from [IMNet](https://github.com/czq142857/IM-NET#datasets-and-pre-trained-weights), which is obtained from [HSP](https://github.com/chaene/hsp).
-
-The dataset we adopted is a downsampled version (64^3) from these dataset (which is 256 resolution).
-Please download our processed dataset from this google drive [URL](https://drive.google.com/file/d/1HUbI45KmXCDJv-YVYxRj-oSPCp0D0xLh/view?usp=sharing).
-And then extract the data to `datasets/IMNet2_64/`.
-
-To use the full resolution dataset, please first download the original IMNet and HSP datasets, and run the `make_imnet_dataset` function in `shapeformer/data/imnet_datasets/imnet_datasets.py`
-
-### D-FAUST Human Dataset
-We also provide the scripts for process the D-FAUST human shapes. 
-First, download the official D-FAUST dataset from this [link](https://dfaust.is.tuebingen.mpg.de/download.php) and extract to `datasets/DFAUST`
-Then, execute the following lines to generate obj files and generate sdf samples for the human meshes.
-
-      cd shapeformer/data/dfaust_datasets/datagen
-      python generate_dfaust_obj_runfile.py
-      bash generate_dfaust_obj_all.sh
-      python generate_dfaust_sdf_samples.py
 
 ## Usage
 
+After the data and checkpoints are downloaded, you can run this command to run the full pipeline to first generate geometry (null2geo) with the DiT model and then generate the material (geo2mat) with pytorch-imagen.
 
-First, train VQDIF-16 with 
 
-      python -m shapeformer.trainer --opts configs/vqdif/shapenet_res16.yaml --gpu 0
+      python -m src.trainer --opts src/models/omages64_DiT/cfgs/pipeline_N2G2M.yaml --gpus 0 --mode 'test'
+      # if you want to utilize multi-gpu to generate multiple objects at the same time:
+      python -m src.trainer --opts src/models/omages64_DiT/cfgs/pipeline_N2G2M.yaml --gpus 0 1 2 3 --mode 'test'
 
-After VQDIF is trained, train ShapeFormer with
 
-      python -m shapeformer.trainer --opts configs/shapeformer/shapenet_scale.yaml --gpu 0
+The generated data and visualizations will be placed in `experiments/omages64/pipeline_N2G2M/results/N2G2MCallback/`. By default, the `pipeline_N2G2M.yaml` file is configured to generate chairs. You can change it according to the category names listed in `src/data/abo_datasets/omg_dataset.py`.
 
-For testing, you just need to append `--mode test` to the above commands.
-And if you only want to run callbacks (such as visualization/generation), set the mode to `run`
+To train and test the null2geo and geo2mat model, please use the following commands:
 
-There is a visualization callback for both VQDIF and ShapeFormer, who will call the model to obtain 3D meshes and render them to images. The results will be save in `experiments/$exp_name$/results/$callback_name$/`
-The callbacks will be automatically called during training and testing, so to get the generation results you just need to test the model.
+      # Train null2geo
+      python -m src.trainer --opts src/models/omages64_DiT/cfgs/null2geo.yaml --gpus 0
+      # Visualize and test null2geo
+      python -m src.trainer --opts src/models/omages64_DiT/cfgs/null2geo.yaml --gpus 0 --mode 'test'
 
-ALso notice that in the configuration files batch sizes are set to very small so that the model can run on a 12GB memory GPU. You can tune it up if your GPU has a larger memory.
+      # Train geo2mat
+      python -m src.trainer --opts src/models/omages64_DiT/cfgs/geo2mat_imagen.yaml --gpus 0
+      # Visualize and test geo2mat
+      python -m src.trainer --opts src/models/omages64_DiT/cfgs/geo2mat_imagen.yaml --gpus 0 --mode 'test'
 
-### Multi-GPU
-Notice that to use multiple GPUs, just specify the GPU ids. For example `--gpu 0 1 2 4` is to use the 0th, 1st, 2nd, 4th GPU for training. Inside the program their indices will be mapped to 0 1 2 3 for simplicity.
 
 ## Frequently Asked Questions
 
-*What is the meaning of the variables Xbd, Xtg, Ytg... ?*
+What's the core difference between UV map and omage?
 
-Here is a brief description of the variable names:
+Omage, as a kind of multi-chart geometry image, is focused on *auto-encoding* geometry and textures altogether, where commonly used UV-maps only focuses on retrieving textures from 2D.
 
-> `tg` stands for `target`, which is the samples (probes) of the target occupancy fields.
-> `bd`, or `boundary` stands for the points sampled from the shape surface.
-> `ct` stands for `context`, which is the partial point cloud that we want to complete.
-> `X` stands for point coordinate.
-> `Y` stands for the occupancy value of the point coordinate.
+## :hourglass_flowing_sand: Updates
 
-The `target` and `context` names come from the field of meta-learning.
-
-Notice that the `Ytg` in the hdf5 file stands for the occupancy value of the probes `Xtg`.
-In the case of `IMNET2_64`, `Xtg` is the collection of the 64-grid coordinates, which has the shape of `(64**3, 3)` and `Ytg` is the corresponding occupancy value.
-It is easy to visualize the shape with marching cubes if `Xtg` is points of a grid. But you can use arbitrarily sampled points as `Xtg` and `Ytg` for training.
-
-*How can I evaluate the ShapeFormer?*
-
-[Here](https://drive.google.com/file/d/1KjbFUuxTWrZ97Cz8ZlFoOB3gDGCyuwt-/view?usp=share_link) is an incomplete collection of evaluation code of ShapeFormer.  -->
+- [x] ~~Source code and data, coming soon!~~
+- [ ] Higher-resolution omages generation.
+- [ ] Cleanup the omage encoder script that converts 3D objects into omages.
 
 ## :notebook_with_decorative_cover: Citation
 
@@ -136,12 +110,6 @@ If you find our work useful for your research, please consider citing the follow
   url={https://arxiv.org/abs/2408.03178}, 
 }
 ```
-<!-- 
-## 📢: Shout-outs
-The architecture of our method is inspired by [ConvONet](https://github.com/autonomousvision/convolutional_occupancy_networks), [Taming-transformers](https://github.com/CompVis/taming-transformers) and [DCTransformer](https://github.com/benjs/DCTransformer-PyTorch).
-Thanks to the authors.
-
-Also, make sure to check this amazing transformer-based image completion project([ICT](https://github.com/raywzy/ICT))! -->
 
 ## :email: Contact
 

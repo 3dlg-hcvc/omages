@@ -1,0 +1,55 @@
+# python -m src.trainer --opts src/models/omages64_DiT/cfgs/geo2mat_imagen.yaml --gpus 0 1 2 3
+
+project_name: omg
+expr_name: omages64/geo2mat_imagen
+
+pltrainer_opt:
+  resume_from: resume
+  logger_kwargs:
+    mode: "online" # online, offline, disabled
+    tags: ["geo2mat", "imagen"] 
+    notes: "geo2mat imagen"
+  check_val_every_n_epoch: 4
+  max_epochs: 3000
+  #strategy: "ddp" 
+  strategy: "ddp_find_unused_parameters_true"
+  early_stop_patience: 1000
+  extra_kwargs:
+    num_sanity_val_steps: 0
+    enable_model_summary: true
+    # precision: '16-mixed'
+    precision: '32-true'
+
+pl_model_opt:
+  _target_: src.models.omages64_DiT.pl_imagen_model.Model
+  init_from_ckpt: null
+  omage_channels: 5
+  cond_omage_channels: 4
+  dim: 256
+
+datamodule_opt:
+  _target_: src.datamodule.DataModule
+  num_workers: 4
+  batch_size: 32
+  test_batch_size: 32
+  trainset_opt: &dset_opt
+    _target_: src.data.abo_datasets.omg_dataset.G2M_Label_OmgABO
+    mode: 'nonormal' # normal is disabled for easier learning
+    duplicate: 1
+    dset_df: datasets/ABO/omages/df_p64_m02_res64
+  testset_opt: *dset_opt
+
+callbacks:
+  vis:
+    _target_: src.models.omages64_DiT.pl_model.Visualizer
+    no_sanity_check: False
+    every_n_epoch: 16
+    mode: G2M
+    load_compute: False
+    parallel_vis: True
+    # single_vis: True
+    visual_indices: [0,1,2,3,4,5,6,7]
+
+    # visual_indices: all
+    # all_indices: True
+    

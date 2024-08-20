@@ -1,0 +1,71 @@
+name: dlt
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+#  - pyg # pytorch geometric
+  - defaults
+dependencies:
+  - python>=3.9
+  - pip
+  - cython>=0.29.0
+  - jupyterlab
+  - ipykernel
+# need this command afterward
+# ipython kernel install --user --name=<any_name_for_kernel>
+
+# numpy universe
+  - numpy>=1.16.5
+  - matplotlib>=3.0.3
+  - pandas<=1.5.0
+  - pytables
+  - scikit-learn
+  - scikit-image>=0.14.1
+  - scipy==1.11.1 # scipy 1.12.0 will cause FID computation to fail (sqrtm will produce complex matrixn)
+  - seaborn>=0.12.0
+# deep learning 
+  - pytorch::pytorch-cuda=11.7
+  - pytorch::pytorch==2.0.1
+  - mkl==2024.0 # if having mkl>=2024.1 then 'torch/lib/libtorch_cpu.so: undefined symbol: iJIT_NotifyEvent' error will occur
+  - pytorch::torchvision
+  - pytorch::torchaudio
+  - conda-forge::lightning==2.2.3
+  
+#  - tensorboardx>=2.0
+#  - tensorboard>=2.0
+#  changed tensorboard to wandb
+# system, file io, testing
+  - pytest>=4.0.2
+  - tqdm>=4.28.1
+  - pyyaml>=3.13
+  - bashlex
+  - pathos
+  - nb_conda_kernels
+# geometry
+  #- conda-forge::igl>=2.2.0
+  - trimesh>=3.7.4
+  - plyfile>=0.7
+#  - pyg::pytorch-cluster 
+# rendering, image and video processing
+  - conda-forge::ffmpeg
+  - Pillow>=8.0.0
+  - fresnel==0.13.4
+  - imageio
+  - pip:
+    - bpy==4.0.0
+    - libigl==2.5.0
+    - imagen_pytorch==1.26.0
+    # - chamferdist
+    - h5py
+    - PyMCubes
+    - wandb
+    - einops
+    - scikit_image>=0.17.2
+    - scikit_learn>=1.0.1
+    - einops-exts==0.0.4
+    - itables
+    - omegaconf
+    - timm
+    - huggingface_hub
+    - torch_ema
+    - rich==10.2.2 # lightning RichProgressBar requires rich>=10.2.2

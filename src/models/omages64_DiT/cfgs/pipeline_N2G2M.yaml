@@ -1,0 +1,44 @@
+# python -m src.trainer --opts src/models/omages64_DiT/cfgs/pipeline_N2G2M.yaml --mode 'test' --gpus 0 1 2 3
+
+project_name: omg
+expr_name: omages64/pipeline_N2G2M
+
+pltrainer_opt:
+  resume_from: 'resume'
+  logger_kwargs:
+    mode: "disabled" # online, offline, disabled
+  extra_kwargs:
+    num_sanity_val_steps: 0
+    enable_model_summary: true
+    precision: '32-true'
+
+pl_model_opt:
+  _target_: src.models.omages64_DiT.pl_N2G2M_pipeline.Model
+
+datamodule_opt:
+  _target_: src.datamodule.DataModule
+  num_workers: 4
+  batch_size: 4
+  test_batch_size: 4
+  trainset_opt: &dset_opt
+    _target_: src.data.abo_datasets.omg_dataset.N2G_Label_OmgABO
+    mode: 'fullsplit'
+    cates: ['chair'] # 'mirror', 'lamp', 'pillow', ...
+    duplicate: 1
+    dset_df: datasets/ABO/omages/df_p64_m02_res64
+  testset_opt: *dset_opt
+
+# this callback will iterate the visualization dataset (which is usually the testset) and visualize the results.
+callbacks: 
+  vis:
+    _target_: src.models.omages64_DiT.pl_N2G2M_pipeline.N2G2MCallback
+    no_sanity_check: False
+    every_n_epoch: 1
+    if_load_saved_compute: [True, True, False] # Turn to [True, False, False] to keep the generated geometry unchanged and generate new materials. Check the 'define_nodes_graph' function in the callback for more details.
+    visual_indices: [0,1,2,3,4,5,6,7]
+    N2G_cfg: 'src/models/omages64_DiT/cfgs/null2geo.yaml'
+    N2G_ckpt: 'experiments/omages64/null2geo/checkpoints/N2G_dit_allcate.ckpt'
+    G2M_cfg: 'src/models/omages64_DiT/cfgs/geo2mat_imagen.yaml'
+    G2M_ckpt: 'experiments/omages64/geo2mat_imagen/checkpoints/G2M_imagen_allcate.ckpt'
+    # visual_indices: all
+    # all_indices: True
