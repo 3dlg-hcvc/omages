@@ -95,7 +95,7 @@ Omage, as a kind of multi-chart geometry image, is focused on *auto-encoding* ge
 - [ ] Higher-resolution omages generation.
 - [ ] Cleanup the omage encoder script that converts 3D objects into omages.
 
-# :takeout_box: Takeaways
+## :takeout_box: Takeaways
 
 1. Omage encodes geometry as a (R,R,3+1) image, which is essentially a 16-bit RGBA PNG!
 
