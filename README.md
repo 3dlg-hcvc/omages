@@ -95,6 +95,28 @@ Omage, as a kind of multi-chart geometry image, is focused on *auto-encoding* ge
 - [ ] Higher-resolution omages generation.
 - [ ] Cleanup the omage encoder script that converts 3D objects into omages.
 
+# :takeout_box: Takeaways
+
+1. Omage encodes geometry as a (R,R,3+1) image, which is essentially a 16-bit RGBA PNG!
+
+2. PBR material is encoded in another (R,R,8) image.
+So three PNGs will give you a realistic 3D object.
+
+3. You can use image generation models to generate 3D objects, one image for one object!
+
+4. Discrete patch structures emerge out of continuous noise during the denoising process.
+
+5. Patch segmentation comes naturally from 2D disconnected components, no instance labels needed!
+
+6. Irregular connectivity & complex topology?
+No worries, all encoded in a regular image.
+
+7. Change your object resolution by just rescaling the omage!
+
+8. Generated shapes come with UV maps—no unwrapping required.
+
+And there’s even more to discover!
+
 ## :notebook_with_decorative_cover: Citation
 
 If you find our work useful for your research, please consider citing the following papers :)
