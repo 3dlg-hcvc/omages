@@ -16,7 +16,7 @@
 
 
 ### [Project Page](https://omages.github.io/) | [Paper (ArXiv)](https://arxiv.org/abs/2408.03178) 
-<!-- | [Twitter thread](https://twitter.com/yan_xg/status/1539108339422212096) -->
+| [Twitter thread](https://x.com/yan_xg/status/1825830023636631990)
 
 
 
