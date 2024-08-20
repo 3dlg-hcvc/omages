@@ -15,8 +15,7 @@
 <sup>1</sup>Simon Fraser University, <sup>2</sup>City University of Hong Kong, <sup>3</sup>Canada-CIFAR AI Chair, Amii
 
 
-### [Project Page](https://omages.github.io/) | [Paper (ArXiv)](https://arxiv.org/abs/2408.03178) 
-| [Twitter thread](https://x.com/yan_xg/status/1825830023636631990)
+### [Project Page](https://omages.github.io/) | [Paper (ArXiv)](https://arxiv.org/abs/2408.03178) | [Twitter thread](https://x.com/yan_xg/status/1825830023636631990)
 
 
 
