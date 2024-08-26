@@ -39,7 +39,7 @@ First, clone this repository:
 
 Then, create a mamba environment with the yaml file. (Sometimes the conda is a bit slow to solve the dependencies, so [mamba](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html) is recommended). You could also just use conda as well.
 
-      mamba env create -f environment.yaml
+      mamba env create -f environment.yml
       mamba activate dlt
 
 ## Download data and checkpoints
