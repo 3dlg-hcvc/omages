@@ -462,3 +462,357 @@ def objamage_decoderv2(omage, save_path=None, boundary_zipping=False, boundary_z
                 bpy.ops.export_scene.gltf(filepath=save_path.replace(".blend", ".glb"), export_format='GLB', use_selection=True)
 
     return obj, meshing_ret
+
+def meshing_uv_map(occupancy):
+    occ = occupancy.astype(bool)
+    pixel_index = np.arange(occ.size).reshape(occ.shape)
+
+    # Determine triangles' vertices
+    is_tri_vert = occ & np.roll(occ, shift=-1, axis=0) & np.roll(occ, shift=-1, axis=1)
+    verta = pixel_index
+    vertb = np.roll(pixel_index, shift=-1, axis=1)
+    vertc = np.roll(pixel_index, shift=-1, axis=0)
+    face0 = np.stack([verta[is_tri_vert], vertb[is_tri_vert], vertc[is_tri_vert]], axis=1)
+    
+    # Determine the second set of triangles' vertices
+    is_tri_vert = occ & np.roll(occ, shift=1, axis=0) & np.roll(occ, shift=1, axis=1)
+    verta = pixel_index
+    vertb = np.roll(pixel_index, shift=1, axis=1)
+    vertc = np.roll(pixel_index, shift=1, axis=0)
+    face1 = np.stack([verta[is_tri_vert], vertb[is_tri_vert], vertc[is_tri_vert]], axis=1)
+    
+    # Combine the two sets of faces
+    face = np.concatenate([face0, face1], axis=0)
+
+    return face
+
+def meshing_objamage(objamage, prune_verts=True):
+    """ Turn an objamage into a mesh.
+    Args:
+        objamage: dict, containing 'position', 'occupancy', 'objnormal'.
+        return_uv: bool, whether to return uv as well.
+        prune_verts: bool, whether to remove unused vertices to reduce size.
+    """
+    # Generate pixel indices array
+    if type(objamage) == np.ndarray:
+        objamage = tensor2omg(objamage)
+    occ    = objamage['occupancy'] > .5
+    vert   = objamage['position'] * 2 - 1
+    objnormal = objamage['objnormal'] * 2 - 1 if objamage.get('objnormal', None) is not None else None
+    pixel_index  = np.arange(occ.size).reshape(occ.shape)
+    vert         = vert.reshape(-1, 3)
+    objnormal       = objnormal.reshape(-1, 3) if objnormal is not None else None
+    
+    face = meshing_uv_map(occ)
+    if face.shape[0] == 0: # no face, return empty mesh
+        meshing_ret = dict( vert = np.zeros((0,3)), face = np.zeros((0,3)).astype(int), uv = np.zeros((0,2)))
+        return meshing_ret
+
+    # flip faces with inconsistent objnormal vs face normal
+    if objnormal is not None:
+        face_normal = np.cross(vert[face[:,1]] - vert[face[:,0]], vert[face[:,2]] - vert[face[:,0]])
+        flip_mask = np.einsum('ij,ij->i', face_normal, objnormal[face[:,0]]) < 0
+        face[flip_mask] = face[flip_mask][:,[0,2,1]]
+    
+    uv = nputil.makeGrid([0,0], [1,1], shape=(occ.shape[0], occ.shape[1]), mode='on')
+    uv[..., [0,1]] = uv[..., [1,0]] # swap x, y to match the image coordinate system
+    meshing_ret=dict( vert=vert, face=face, uv=uv)
+    for key in objamage:
+        if key not in ['vert', 'face', 'uv'] and objamage[key] is not None:
+            meshing_ret[key] = objamage[key].reshape(-1, objamage[key].shape[-1])
+
+    if prune_verts:
+        vert, face, unique_vert_ind = geoutil.prune_unused_vertices(vert, face)
+        uv = uv[unique_vert_ind]
+        for key in meshing_ret:
+            if key not in ['vert', 'face', 'uv']:
+                print(key, meshing_ret[key].shape)
+                meshing_ret[key] = meshing_ret[key][unique_vert_ind]
+        meshing_ret['vert'], meshing_ret['face'], meshing_ret['uv'] = vert, face, uv
+    return meshing_ret
+
+def remove_small_patches(obj, min_area=1e-5, max_n_patch=128):
+    import igl
+    import bpy
+    from xgutils import bpyutil
+    bpyutil.set_active_exclusive(obj)
+    bpy.ops.object.mode_set(mode='EDIT')
+    # deselect all faces, edges, verts
+    bpy.ops.mesh.select_all(action='SELECT')
+
+    ov, of, ou = bpyutil.get_trimesh(obj, return_uv=True)
+    f_component_id = igl.facet_components(of) # assuming component ids have no gaps (not like 0,1,3,4)
+    face_area_2d = np.abs(igl.doublearea(ou, of)) / 2
+    face_area_3d = np.abs(igl.doublearea(ov, of)) / 2
+    component_area_2d = np.bincount(f_component_id, weights=face_area_2d)
+    component_area_3d = np.bincount(f_component_id, weights=face_area_3d)
+
+    remove_component_mask = (component_area_2d < min_area) | (component_area_3d < min_area)
+
+    rkfarea = np.argsort(component_area_3d)[::-1]
+    print("num patch", len(rkfarea))
+    # only keep K largest patches
+    if len(rkfarea) > max_n_patch:
+        remove_component_mask[rkfarea[max_n_patch:]] = True
+
+    remove_face_mask = remove_component_mask[f_component_id]
+
+    # select faces to remove
+    mesh = obj.data
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='DESELECT') # deselect all verts, edges as well.
+    bpy.ops.object.mode_set(mode='OBJECT')
+    mesh.polygons.foreach_set('select', remove_face_mask)
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.delete(type='FACE')
+    nv, nf, nu = bpyutil.get_trimesh(obj, return_uv=True)
+
+    n_patch_original = len(component_area_2d)
+    n_patch_removed = remove_component_mask.sum()
+    n_patch_final = len(np.unique(igl.facet_components(nf)))
+    print("#patches original", n_patch_original)
+    print("#patches removed due to small area", n_patch_removed)
+    print("#patches final", n_patch_final)
+
+    meta_info = dict(n_patch_original=n_patch_original, n_patch_removed=n_patch_removed, n_patch_final=n_patch_final)
+
+    return (ov, of, ou), (nv, nf, nu), meta_info
+
+# objamage autoencoder v2
+def repacking_uv2(obj, margin=0.02, min_area=1e-5, max_n_patch=128, rescale_area=False, shape_method='AABB', margin_method='SCALED'):
+    """ 
+    repacking uv version 2, assuming all parts are joined into a single mesh,
+    Different from v1:
+        no need to first seperate by loose parts.
+        resize with 3d area, detect overlap and re-unwrap the overlaps after repacking.
+        weld the obj in 3d (welding in 3D is very useful for obtaining connected uv islands)
+    """
+    import bpy
+    from xgutils import bpyutil
+    bpyutil.set_active_exclusive(obj)
+    # create if not exist
+    if 'Repack' not in obj.data.uv_layers:
+        obj.data.uv_layers.new(name='Repack')
+    else:
+        print('Repack uv map already exists, skip creating.')
+        return
+    # set the new uv map as the active one
+    obj.data.uv_layers['Repack'].active = True
+
+    # Ensure we're in edit mode for UV packing
+    bpy.ops.object.mode_set(mode='EDIT')
+    # weld the obj in 3d (welding in 3D is very useful for obtaining connected uv islands)
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.remove_doubles(threshold=1e-6, use_unselected=False, use_sharp_edge_from_normals=True) # already selected all verts
+
+    # remove islands with area less than 0.0001 and only keep the largest K islands
+    # remove small islands
+    _, _, meta_info = remove_small_patches(obj, min_area=min_area, max_n_patch=max_n_patch)
+
+    # select all uv
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.context.scene.tool_settings.use_uv_select_sync = False # It turns out you have to select multiple uv verts if sync is turned on, which may cause problem for uv repacking operations.
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.select_all(action='SELECT')
+
+    if rescale_area == True:
+        bpy.ops.uv.average_islands_scale() # scale all islands according to their area in 3D. For .glb with multiple objects, this is necessary as the UV islands are not scaled properly across objects.
+    # Pack UV islands with specified parameters
+    bpy.ops.uv.pack_islands(rotate=False, scale=True, margin=margin, shape_method=shape_method, margin_method=margin_method)
+    """ AABB is fastest (3.5s), Convex is fast (4s) while Concave is slow (15s). test case: formschussel_fur_terra_sigillata-schalen.glb
+        Note that also AABB will cause more empty space, but it is easier for generative models.
+    """
+    bpy.ops.uv.seams_from_islands()
+
+    # # detect overlap #!! It turns out overlap is very common, but most of them are tiny glitches. But if uv-unwrap the pattern may be destroyed.
+    # bpy.ops.uv.select_all(action='SELECT')
+    # bpy.ops.uv.select_overlap() # select all overlaps
+    # bpy.ops.uv.select_linked() # select all islands containing these overlaps
+    # bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.1) # 
+    # Return to object mode
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    return meta_info
+
+
+def setup_baking(node_tree, resolution=10, bake_target='position'):
+    """ First bake objnormal since it can be used to determine occupancy in 2D uv map.
+    """
+    import bpy
+    # object mode
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.context.scene.cycles.use_denoising = False # disable denoising to speed up baking
+
+    baking_kwargs = dict(type='EMIT', pass_filter={'EMIT'}, use_clear=True, margin=32, margin_type='EXTEND') # large margin size will make the baking slower. Small margin (e.g. 2) will cause artifacts when downscale the objamage.
+
+    nodes = node_tree.nodes
+    links = node_tree.links
+    bsdf_node = nodes["Principled BSDF"]
+    output_node = nodes["Material Output"]
+
+    if bake_target == 'objnormal' or bake_target == 'position':
+        nnname = "Objamage_geometry"
+        geo_node = nodes.get(nnname, None)
+        if geo_node is None:
+            geo_node = nodes.new(type='ShaderNodeNewGeometry')
+            geo_node.name  = nnname
+
+        if bake_target == 'objnormal':
+            bpy.ops.object.shade_smooth(use_auto_smooth=False) # use smooth shading
+            baking_kwargs.update(type='NORMAL', pass_filter=set(), normal_space='OBJECT', margin_type='EXTEND', margin=1)
+            links.new(bsdf_node.outputs['BSDF'], output_node.inputs['Surface'])
+        elif bake_target == 'position':
+            links.new(geo_node.outputs['Position'], output_node.inputs['Surface'])
+    else:
+        mapper = dict(color='Base Color', metal='Metallic', rough='Roughness') # removed normal. use objnormal instead.
+        # First check if there is a link (texture map), if not, use the value directly
+        if len(bsdf_node.inputs[mapper[bake_target]].links) == 0:
+            # create a new value node whose value is the same as the bsdf node's input
+            if bake_target == 'color':
+                node_type = 'ShaderNodeRGB'
+                node_output = 'Color'
+            else:
+                node_type = 'ShaderNodeValue'
+                node_output = 'Value'
+            value_node = nodes.new(type=node_type)
+            value_node.name = f"Objamage_{bake_target}_value"
+            value_node.outputs[node_output].default_value = bsdf_node.inputs[mapper[bake_target]].default_value
+            # if bake_target == 'color':
+            #     for i in range(3):
+            #         value_node.outputs[node_output].default_value[i] **= 1/2.2 # gamma correction
+            input_socket = value_node.outputs[node_output]
+            # connect the value node to output node's Surface socket
+            links.new(input_socket, output_node.inputs['Surface'])
+        else:
+            link = bsdf_node.inputs[mapper[bake_target]].links[0]
+            if bake_target == 'normal':
+                link = link.from_node.inputs['Color'].links[0]
+            source_node = link.from_node
+            source_socket = link.from_socket
+            # connect the source node to output node's Surface socket
+            links.new(source_node.outputs[source_socket.name], output_node.inputs['Surface'])
+
+    # remove the old image if exists
+    bake_image = bpy.data.images.get(f"objamage_{bake_target}")
+    if bake_image is None:
+        bake_image = bpy.data.images.new(f"objamage_{bake_target}", width=2**resolution, height=2**resolution, alpha=True, float_buffer=True)
+    bake_image.file_format = 'OPEN_EXR'
+    bake_image.colorspace_settings.name = 'Non-Color'
+    
+    ntexname = f"Objamage_{bake_target}"
+    bake_node = nodes.get(ntexname, None)
+    if bake_node is not None:
+        nodes.remove(bake_node)
+    bake_node = nodes.new(type='ShaderNodeTexImage')
+    bake_node.image = bake_image
+    bake_node.name  = ntexname
+
+    nnname = "Objamage_uvmap"
+    uv_map_node = nodes.get(nnname, None)
+    # remove the old uv map node if exists
+    if uv_map_node is None:
+        # Create a new UV Map node
+        uv_map_node = nodes.new(type='ShaderNodeUVMap')
+        uv_map_node.uv_map = "Repack" # Assuming'Repack' is the name of the new UV Map
+        uv_map_node.name = nnname
+        
+    # Connect the UV Map node to the Image Texture node
+    links.new(uv_map_node.outputs['UV'], bake_node.inputs['Vector'])
+
+    # set pos_node as the active node
+    nodes.active = bake_node
+
+    return baking_kwargs
+
+def baking_obj(obj, resolution=10, bake_target='position'):
+    """ 
+    setup baking for an object
+    """
+    import bpy
+    from xgutils import bpyutil
+    # Iterate all materials of the object
+    for mat in obj.data.materials:
+        if mat.use_nodes:
+            baking_kwargs = setup_baking(mat.node_tree, resolution=resolution, bake_target=bake_target)
+    
+    bpy.ops.object.bake(**baking_kwargs)
+    
+    # save all modified images
+    bpy.ops.image.save_all_modified()
+    baked_img = bpyutil.bpyimg2np(bpy.data.images[f"objamage_{bake_target}"])
+    return baked_img
+
+def baking_uv(obj, resolution=10):
+    import bpy
+    from xgutils import bpyutil
+    bpyutil.set_active_exclusive([obj])
+    bpy.ops.object.shade_smooth(use_auto_smooth=False) # use smooth shading
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.context.scene.tool_settings.use_uv_select_sync = False # It turns out you have to select multiple     
+    obj.data.uv_layers['UVMap'].active_render = True # activate the default uv map
+    
+    # set up baking settings
+    bpy.context.scene.render.engine = 'CYCLES'
+    bpy.context.scene.cycles.samples = 1 # baking surface properties does not need high samples
+    bpy.context.scene.cycles.use_adaptive_sampling = False
+    bpy.context.scene.render.bake.margin_type = 'EXTEND' # or 'ADJACENT_FACES'
+    bpy.context.scene.render.bake.margin = 2#**resolution
+
+    # Iterate all materials of the object
+    # Difference between objnormal and normal: objnormal is the final normal (combining normal map with geometry normal), while normal is the normal map to the material.
+    #objamage = dict(objnormal=None, position=None, color=None, normalmap=None, metal=None, rough=None)
+    objamage = dict(objnormal=None, position=None, color=None, metal=None, rough=None)
+    for bake_target in objamage:
+        objamage[bake_target] = baking_obj(obj, resolution=resolution, bake_target=bake_target)
+    # occupancy is objnormal booleaned. if trunormal is 0 vector then it is 0, otherwise 1
+    objamage['occupancy']  = (np.linalg.norm(objamage['objnormal'][...,:3], axis=-1) > 0)[..., None]
+    objamage['position']   = (objamage['position'][...,:3] + 1) / 2 # normalize to [0, 1]
+    objamage['objnormal']  = objamage['objnormal'][...,:3] # remove alpha channel
+
+    return objamage # all images are in [0, 1] range
+def objamage_encoderv2(glb_path, resolution=10, min_patch_area=1e-4, max_n_patch=128, repack_margin=0.02, repacking_margin_method='FRACTION', save_path=None, rescale_area=False, use_uint16=False, subdiv=0,  preset_blend=PRESET_BLEND):
+    from xgutils import bpyutil
+    import bpy
+    timer = sysutil.Timer()
+    if preset_blend is None:
+        preset_blend = bpyutil.preset_blend
+    bpyutil.load_blend(preset_blend)
+    timer.update("loading preset blend")
+    bpyutil.clear_collection("workbench")
+    obj = bpyutil.load_glb(glb_path) # load glb, join into a single mesh and put it to workbench collection
+    if subdiv > 0:
+        bpy.ops.object.modifier_add(type='SUBSURF')
+        bpy.context.object.modifiers["Subdivision"].levels = subdiv
+        bpy.ops.object.modifier_apply(modifier="Subdivision")
+        # triangulate
+        bpy.ops.object.modifier_add(type='TRIANGULATE')
+        bpy.ops.object.modifier_apply(modifier="Triangulate")
+    timer.update("loading glb")
+
+    obj = bpy.context.active_object
+    bpyutil.set_active_exclusive(obj)
+    meta_info = repacking_uv2(obj, margin=repack_margin, min_area=min_patch_area, max_n_patch=max_n_patch, margin_method=repacking_margin_method, rescale_area=rescale_area)
+    timer.update("repacking uv")
+    #vert, face, uv = bpyutil.get_trimesh_uv(obj)
+    vert, face, uv = bpyutil.get_trimesh(obj, return_uv=True)
+    #uv = vert[..., :2]
+    timer.update("get mesh")
+    objamage = baking_uv(obj, resolution=resolution)
+    timer.update("baking uv")
+    
+    timer.rank_interval()
+    if save_path is not None:
+        if save_path.endswith(".ply"):
+            import igl
+            igl.write_triangle_mesh(save_path, vert, face, uv, force_ascii=False)
+        if save_path.endswith(".blend"):
+            # sometimes saving may cause exception when using multi-processing
+            # so try again if failed
+            bpyutil.save_blend(save_path, over_write=True)
+
+    objamage_tensor = omg2tensor(objamage)
+    objamage['combined'] = np.clip(objamage_tensor, 0, 1)
+    if use_uint16:
+        objamage['combined'] = (objamage['combined'] * 65535).astype(np.uint16)
+    return objamage, vert, face, uv, meta_info
